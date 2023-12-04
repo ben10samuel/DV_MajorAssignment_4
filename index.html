@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Interactive Contour Map</title>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.js"></script>
+  <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.js"></script>
+
+  <link rel="stylesheet" href="//code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      flex-direction: column;
+    }
+
+    #time {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      font-family: sans-serif;
+      font-size: 12pt;
+    }
+
+    .legend_text {
+      font-family: sans-serif;
+      font-size: 5pt;
+    }
+
+    #slider-range,
+    #custom-brush-slider {
+      width: 80%;
+      margin: 15px auto;
+    }
+
+    #svg-container {
+      text-align: center;
+    }
+  </style>
+
+</head>
+
+<body>
+
+<p>
+  <label for="amount">Density range:</label>
+  <input type="text" id="amount" readonly style="border:0; color:#f6931f; font-weight:bold;">
+</p>
+
+<div id="slider-range"></div>
+
+<div id="svg-container">
+  <svg width="60vw" viewbox="0 0 1000 500"></svg>
+</div>
+
+<div id="time"></div>
+
+
+
+<script>
+  const dictFile = 'data/Data_CT.csv'; // abstracted data file
+  let svg = d3.select("svg");
+  const path = d3.geoPath();
+``
+
+  function plot_contour(fileName, min_val, max_val, bin_counts) {
+    d3.csv(fileName).then((data) => {
+      let m = 512,
+              n = 512;
+      let values_T = [];
+      data.forEach(d => values_T.push(+d[0]));
+
+      let colorScale = d3.scaleDiverging()
+              .domain([min_val, (min_val + max_val) / 2, max_val])
+              .interpolator(d3.interpolateRdBu);
+
+      let contours = d3.contours()
+              .size([m, n])
+              .thresholds(d3.range(min_val, max_val, 30))
+              (values_T);
+
+      svg.selectAll(".contours").remove();
+      svg.append("g").attr("class", "contours")
+              .selectAll("path")
+              .data(contours)
+              .enter()
+              .append("path")
+              .attr("d", function (d) {
+                return path(d);
+              })
+              .attr("stroke", "black")
+              .attr("stroke-width", ".1px")
+              .attr("stroke-linejoin", "round")
+              .attr("fill", d => colorScale(d.value));
+    });
+  }
+
+  function updateSliderText(min_val, max_val) {
+    $("#amount").val(`${min_val} - ${max_val}`);
+  }
+
+  $(document).ready(function () {
+    $("#slider-range").slider({
+      range: true,
+      min: 0,
+      max: 2000,
+      values: [100, 1800],
+      slide: function (event, ui) {
+        updateSliderText(ui.values[0], ui.values[1]);
+        plot_contour(dictFile, ui.values[0], ui.values[1], 30);
+      }
+    });
+
+
+    updateSliderText(20,100);
+    plot_contour(dictFile, 20, 100, 30);
+  });
+</script>
+</body>
+
+</html>
